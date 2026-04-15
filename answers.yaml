@@ -1,0 +1,16 @@
+---
+# Test answers for non-interactive rendering
+author_name: "Test Author"
+author_email: "test@example.com"
+license: "Apache-2.0"
+prefix_name: "test"
+features:
+  - "Agent"
+  - "HTTP MCP"
+  - "SQLite"
+  - "xtask"
+ignores:
+  - "IDEA"
+  - "VSCode"
+  - "Claude"
+  - "Rust"

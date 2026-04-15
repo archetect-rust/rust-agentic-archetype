@@ -1,0 +1,31 @@
+---
+description: "Agentic Rust project (MCP server, Agent, or both)"
+summary: "Scaffolds a Rust workspace for an agentic system — rmcp-based MCP server over stdio (and optionally HTTP/SSE), optional rig-based agent, optional SQLite persistence, optional xtask crate. Designed for AI/LLM tool-use workflows."
+authors: ["Jimmie Fulton <jimmie.fulton@gmail.com>"]
+languages: ["Rust"]
+frameworks: ["rmcp", "rig", "axum", "tokio", "clap", "figment"]
+tags: ["archetype", "rust", "mcp", "agent", "ai", "agentic"]
+
+requires:
+  archetect: "3.0.0"
+
+templating:
+  trim_blocks: true
+  lstrip_blocks: true
+
+catalog:
+  # ── Prompt components ──────────────────────────────────────────────
+  author-prompts:
+    description: "Author + license prompts"
+    source: "https://github.com/archetect-common/author-prompts-component.git"
+    show: false
+  project-prompts:
+    description: "Project name prompts (prefix + suffix)"
+    source: "https://github.com/archetect-common/project-prompts-component.git"
+    show: false
+
+  # ── Composed archetypes ────────────────────────────────────────────
+  gitignore:
+    description: "Gitignore generator"
+    source: "https://github.com/archetect-common/dot-gitignore-archetype.git"
+    show: false
