@@ -3,8 +3,8 @@ name = "{{ project-name }}-core"
 description = "Core library for {{ project-title }}"
 version.workspace = true
 edition.workspace = true
-license.workspace = true
-publish.workspace = true
+{% if license ~= "None" then %}license.workspace = true
+{% end %}publish.workspace = true
 
 [dependencies]
 tokio = { workspace = true }

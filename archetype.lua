@@ -1,6 +1,14 @@
 local context = Context.new()
 
+-- ── License (pre-populated so author-prompts skips its own prompt) ───
+-- Override the default "None at the bottom" ordering from author-prompts
+-- so -D / --use-defaults-all selects "None".
+context:prompt_select("License:", "license",
+    { "None", "Apache-2.0", "MIT", "GPL-3.0", "BSD-3-Clause" },
+    { default = "None" })
+
 -- ── Author + license (composed from author-prompts) ──────────────────
+-- license is already set above; author-prompts will skip it.
 context:merge(catalog.render("author-prompts", context))
 
 -- ── Features ─────────────────────────────────────────────────────────

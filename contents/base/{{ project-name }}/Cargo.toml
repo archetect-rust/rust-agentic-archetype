@@ -8,8 +8,8 @@ default-members = ["crates/{{ project-name }}-bin"]
 [workspace.package]
 edition = "2024"
 version = "0.1.0"
-license = "MIT"
-publish = false
+{% if license ~= "None" then %}license = "{{ license }}"
+{% end %}publish = false
 
 [workspace.dependencies]
 {{ project-name }}-core = { path = "crates/{{ project-name }}-core", version = "0.1.0" }
