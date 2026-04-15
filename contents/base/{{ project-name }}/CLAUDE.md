@@ -6,7 +6,8 @@
 cargo build                     # Build workspace
 cargo run -- --help             # Show CLI help
 cargo run -- mcp                # MCP over stdio
-{% if has_http then %}cargo run -- mcp --http         # MCP over stdio + HTTP (port 8080)
+{% if has_http then %}cargo run -- mcp --http         # MCP over stdio + external HTTP
+cargo run -- serve              # HTTP-only (no stdio)
 {% end %}{% if has_agent then %}cargo run -- agent              # Interactive agent
 cargo run -- agent -p '...'    # One-shot prompt
 {% end %}cargo run -- config generate    # Print sample config (YAML by default; --format toml)

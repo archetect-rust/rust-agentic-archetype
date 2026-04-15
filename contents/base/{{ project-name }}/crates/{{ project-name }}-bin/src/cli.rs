@@ -40,6 +40,22 @@ pub enum Commands {
         #[arg(long, env = "{{ PROJECT_NAME }}_INTERNAL_HTTP_PORT")]
         internal_http_port: Option<u16>,
 {% end %}    },
+{% if has_http then %}
+    /// Run as a standalone HTTP MCP server (no stdio)
+    Serve {
+        /// External HTTP listen port (overrides config)
+        #[arg(long, env = "{{ PROJECT_NAME }}_HTTP_PORT")]
+        port: Option<u16>,
+
+        /// Enable internal (unauthenticated) HTTP transport alongside the external one
+        #[arg(long, env = "{{ PROJECT_NAME }}_INTERNAL_HTTP_ENABLED")]
+        internal_http: bool,
+
+        /// Internal HTTP listen port (implies --internal-http)
+        #[arg(long, env = "{{ PROJECT_NAME }}_INTERNAL_HTTP_PORT")]
+        internal_http_port: Option<u16>,
+    },
+{% end %}
 {% if has_agent then %}
     /// Run the agent
     Agent {

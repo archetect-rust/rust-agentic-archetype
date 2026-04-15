@@ -54,7 +54,28 @@ async fn main() -> Result<()> {
 {% end %}
             {{ project_name }}_core::transport_stdio::serve_stdio(server).await
         }
-{% if has_agent then %}
+{% if has_http then %}
+        Commands::Serve { port, internal_http, internal_http_port } => {
+            let config = Arc::new({{ project_name }}_core::config::AppConfig::load()?);
+            let server = {{ project_name }}_core::server::{{ ProjectName }}Server::new(Arc::clone(&config));
+
+            // Internal HTTP — optional, spawned alongside the external server
+            let int_enabled = internal_http || internal_http_port.is_some() || config.http.internal.enabled;
+            if int_enabled {
+                let int_port = internal_http_port.unwrap_or(config.http.internal.port);
+                let internal_server = server.clone();
+                tokio::spawn(async move {
+                    if let Err(e) = {{ project_name }}_core::transport_http::serve_internal_http(internal_server, int_port).await {
+                        tracing::error!("internal HTTP transport error: {e}");
+                    }
+                });
+            }
+
+            let ext_port = port.unwrap_or(config.http.port);
+            let oauth = config.http.oauth.clone();
+            {{ project_name }}_core::transport_http::serve_http(server, ext_port, oauth).await
+        }
+{% end %}{% if has_agent then %}
         Commands::Agent { prompt } => {
             let config = {{ project_name }}_core::config::AppConfig::load()?;
             {{ project_name }}_core::agent::run_agent(&config.model, prompt.as_deref()).await
