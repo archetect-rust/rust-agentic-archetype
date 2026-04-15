@@ -4,7 +4,7 @@ local context = Context.new()
 context:merge(catalog.render("author-prompts", context))
 
 -- ── Features ─────────────────────────────────────────────────────────
-context:prompt_multi_select("Features:", "features", { "Agent", "HTTP MCP", "SQLite", "xtask" })
+context:prompt_multiselect("Features:", "features", { "Agent", "HTTP MCP", "SQLite", "xtask" })
 
 context:set("has_mcp", true)
 context:set("has_stdio", true)

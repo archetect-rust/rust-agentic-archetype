@@ -24,13 +24,21 @@ pub struct Cli {
 pub enum Commands {
     /// Run as MCP server (stdio transport{% if has_http then %}, with optional HTTP{% end %})
     Mcp {
-{% if has_http then %}        /// Enable HTTP/SSE transport (overrides config)
+{% if has_http then %}        /// Enable external HTTP transport (overrides config)
         #[arg(long, env = "{{ PROJECT_NAME }}_HTTP_ENABLED")]
         http: bool,
 
-        /// HTTP listen port (implies --http)
+        /// External HTTP listen port (implies --http)
         #[arg(long, env = "{{ PROJECT_NAME }}_HTTP_PORT")]
         http_port: Option<u16>,
+
+        /// Enable internal (unauthenticated) HTTP transport
+        #[arg(long, env = "{{ PROJECT_NAME }}_INTERNAL_HTTP_ENABLED")]
+        internal_http: bool,
+
+        /// Internal HTTP listen port (implies --internal-http)
+        #[arg(long, env = "{{ PROJECT_NAME }}_INTERNAL_HTTP_PORT")]
+        internal_http_port: Option<u16>,
 {% end %}    },
 {% if has_agent then %}
     /// Run the agent
@@ -50,9 +58,23 @@ pub enum Commands {
 #[derive(Subcommand)]
 pub enum ConfigAction {
     /// Print a sample config file with defaults and comments
-    Generate,
+    Generate {
+        /// Output format
+        #[arg(long, default_value = "yaml")]
+        format: ConfigFormat,
+    },
     /// Print the effective (merged) configuration
-    Show,
+    Show {
+        /// Output format
+        #[arg(long, default_value = "yaml")]
+        format: ConfigFormat,
+    },
+}
+
+#[derive(Clone, ValueEnum)]
+pub enum ConfigFormat {
+    Yaml,
+    Toml,
 }
 
 #[derive(Clone, ValueEnum)]

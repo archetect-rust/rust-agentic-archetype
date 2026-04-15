@@ -9,8 +9,8 @@ cargo run -- mcp                # MCP over stdio
 {% if has_http then %}cargo run -- mcp --http         # MCP over stdio + HTTP (port 8080)
 {% end %}{% if has_agent then %}cargo run -- agent              # Interactive agent
 cargo run -- agent -p '...'    # One-shot prompt
-{% end %}cargo run -- config generate    # Print sample config TOML
-cargo run -- config show        # Print effective merged config
+{% end %}cargo run -- config generate    # Print sample config (YAML by default; --format toml)
+cargo run -- config show        # Print effective merged config (YAML by default)
 cargo test --workspace          # Run all tests
 cargo clippy --all-targets     # Run lints
 cargo fmt --all                # Format code
@@ -58,10 +58,19 @@ All output goes to stderr (stdout is reserved for MCP protocol on stdio). Contro
 `anyhow::Result` for application errors, `thiserror` for typed domain errors in `error.rs`.
 
 ### Configuration
+Both TOML and YAML are supported. YAML is the preferred format; when both files exist, YAML wins on conflicting keys.
+
 figment loads config with this priority (later overrides earlier):
 1. Compiled defaults in `AppConfig::default()`
-2. `{{ project-name }}.toml` in the working directory
-3. Environment variables prefixed with `{{ PROJECT_NAME }}_`
+2. `{{ project-name }}.toml` next to the binary
+3. `{{ project-name }}.toml` in the working directory
+4. `{{ project-name }}.yaml` / `.yml` next to the binary
+5. `{{ project-name }}.yaml` / `.yml` in the working directory
+6. Environment variables prefixed with `{{ PROJECT_NAME }}_`
+
+`cargo run -- config generate` emits a starter file; pass `--format toml` or `--format yaml` (default). `cargo run -- config show` prints the effective merged config in the chosen format.
+
+A `.env` file is loaded at startup from the working directory and from the binary's directory (via `dotenvy`), so secrets like `ANTHROPIC_API_KEY` can live beside the binary without polluting the shell environment.
 
 Config is wrapped in `Arc<AppConfig>` and passed to the server constructor. Run `cargo run -- config generate > {{ project-name }}.toml` to create a starter config file.
 
@@ -120,15 +129,21 @@ Database uses rusqlite with WAL mode. Schema is versioned with `PRAGMA user_vers
 Migrations run automatically on `Database::open()`. Use `:memory:` for tests.
 {% end %}{% if has_http then %}
 ### HTTP Transport
-axum server with graceful shutdown (Ctrl+C + SIGTERM). **Disabled by default** for security.
+Two axum servers with graceful shutdown (Ctrl+C + SIGTERM). **Both disabled by default** for security.
 
-Enable via config (`http_enabled = true`), env var (`{{ PROJECT_NAME }}_HTTP_ENABLED=true`), or CLI (`--http` / `--http-port`). Endpoints:
-- `GET /health` — JSON health status (name from config, version from Cargo.toml)
-- `/mcp` — MCP streamable HTTP transport
+**External endpoint** (`serve_http`) — public-facing, optional OAuth Bearer validation.
+Enable via config (`[http] enabled = true`), env (`{{ PROJECT_NAME }}_HTTP_ENABLED=true`), or CLI (`--http` / `--http-port`). Endpoints:
+- `GET /health` — always public
+- `GET /.well-known/oauth-authorization-server` — always public (when OAuth configured); proxies OIDC discovery
+- `/mcp` — MCP streamable HTTP; requires Bearer JWT when `[http.oauth]` is configured
 
-CORS is permissive by default. Tighten `CorsLayer` in `transport_http.rs` for production.
+**Internal endpoint** (`serve_internal_http`) — loopback-only, no auth, no CORS. For same-host callers that cannot present an OAuth token. Enable via `[http.internal] enabled = true` or `--internal-http` / `--internal-http-port`.
 
-The HTTP task is spawned alongside stdio and shares its lifetime. When the MCP client disconnects and stdio exits, the process terminates and the HTTP task is dropped. If you need the HTTP transport to outlive stdio, add a `CancellationToken` and coordinate shutdown explicitly in `main`.
+**OAuth validation.** Configure under `[http.oauth]` with `issuer` (required) and optional `audience` / `jwks_uri`. JWT validation uses JWKS fetched from the authorization server at startup and cached in memory (1h TTL). JWKS is re-fetched when an unknown `kid` is encountered, handling key rotation transparently. RSA and EC keys are both supported.
+
+CORS is permissive on the external endpoint. Tighten `CorsLayer` in `transport_http.rs` for production.
+
+HTTP tasks are spawned alongside stdio and share its lifetime. When the MCP client disconnects and stdio exits, the process terminates and HTTP tasks are dropped. If you need HTTP to outlive stdio, add a `CancellationToken` and coordinate shutdown explicitly in `main`.
 {% end %}
 
 ## Specifications
@@ -155,6 +170,7 @@ See [docs/specs/INDEX.md](docs/specs/INDEX.md) for the current spec registry.
 | clap | 4 | CLI parsing |
 | figment | 0.10 | Configuration (TOML + env) |
 {% if has_http then %}| axum | 0.8 | HTTP server |
+| jsonwebtoken | 9 | JWT validation (OAuth Bearer) |
 {% end %}{% if has_sqlite then %}| rusqlite | 0.38 | SQLite (bundled, WAL mode) |
 {% end %}| serde | 1.0 | Serialization |
 | anyhow | 1 | Error handling |
