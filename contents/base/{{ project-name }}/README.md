@@ -20,8 +20,9 @@ To also expose the external HTTP endpoint (disabled by default):
 ```bash
 cargo run -- mcp --http                # stdio + external HTTP alongside
 cargo run -- mcp --internal-http       # stdio + loopback HTTP, no auth
-cargo run -- serve                     # external HTTP only, no stdio
-cargo run -- serve --internal-http     # external + internal HTTP, no stdio
+cargo run -- serve --http              # external HTTP only, no stdio
+cargo run -- serve --internal-http     # internal HTTP only, no stdio
+cargo run -- serve --http --internal-http  # both, no stdio
 ```
 
 When `[http.oauth]` is set in the config, `/mcp` requires a valid Bearer JWT; `/health` and `/.well-known/oauth-authorization-server` stay public.

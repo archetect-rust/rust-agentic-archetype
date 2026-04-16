@@ -1,15 +1,14 @@
 local context = Context.new()
 
--- ── License (pre-populated so author-prompts skips its own prompt) ───
--- Override the default "None at the bottom" ordering from author-prompts
--- so -D / --use-defaults-all selects "None".
-context:prompt_select("License:", "license",
-    { "None", "Apache-2.0", "MIT", "GPL-3.0", "BSD-3-Clause" },
-    { default = "None" })
-
--- ── Author + license (composed from author-prompts) ──────────────────
--- license is already set above; author-prompts will skip it.
-context:merge(catalog.render("author-prompts", context))
+-- ── Project Prefix ───────────────────────────────────────────────────
+-- Prompt directly so we control ordering (name → features → license).
+-- Derive prefix_title via Cases.fixed so project-prompts' own prompt is
+-- skipped when called later (both prefix_name and suffix_name pre-set).
+context:prompt_text("Project Prefix:", "prefix_name", {
+    cases = { Cases.programming(), Cases.fixed("prefix_title", Case.Title) },
+    placeholder = "widget",
+    help = "The primary name for the project.",
+})
 
 -- ── Features ─────────────────────────────────────────────────────────
 context:prompt_multiselect("Features:", "features", { "Agent", "HTTP MCP", "SQLite", "xtask" })
@@ -34,14 +33,25 @@ else
     suffix_title = "MCP"
 end
 
--- ── Project Prefix (composed from project-prompts) ───────────────────
--- project-prompts prompts for prefix_name, skips suffix (already set),
--- and composes project_name with Cases.programming() + project_title.
+-- ── Compose project_name via project-prompts ─────────────────────────
+-- Both prefix_name and suffix_name are pre-set, so project-prompts
+-- skips its prompts and just composes project_name / project-name /
+-- PROJECT_NAME / etc. with Cases.programming().
 context:merge(catalog.render("project-prompts", context))
 
 -- Templates reference `{{ project-title }}` (kebab); compose it here
 -- using the fixed-cased prefix_title and our acronym-preserving suffix.
 context:set("project-title", context:get("prefix_title") .. " " .. suffix_title)
+
+-- ── License ──────────────────────────────────────────────────────────
+-- Override author-prompts' "None at the bottom" ordering so
+-- -D / --use-defaults-all selects "None".
+context:prompt_select("License:", "license",
+    { "None", "Apache-2.0", "MIT", "GPL-3.0", "BSD-3-Clause" },
+    { default = "None" })
+
+-- ── Author (license already set, its own prompt skipped) ─────────────
+context:merge(catalog.render("author-prompts", context))
 
 -- ── Render ───────────────────────────────────────────────────────────
 

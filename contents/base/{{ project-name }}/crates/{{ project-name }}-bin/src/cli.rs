@@ -42,12 +42,19 @@ pub enum Commands {
 {% end %}    },
 {% if has_http then %}
     /// Run as a standalone HTTP MCP server (no stdio)
+    ///
+    /// At least one of the external or internal transports must be enabled
+    /// via CLI flag or config.
     Serve {
-        /// External HTTP listen port (overrides config)
-        #[arg(long, env = "{{ PROJECT_NAME }}_HTTP_PORT")]
-        port: Option<u16>,
+        /// Enable external HTTP transport (overrides config)
+        #[arg(long, env = "{{ PROJECT_NAME }}_HTTP_ENABLED")]
+        http: bool,
 
-        /// Enable internal (unauthenticated) HTTP transport alongside the external one
+        /// External HTTP listen port (implies --http)
+        #[arg(long, env = "{{ PROJECT_NAME }}_HTTP_PORT")]
+        http_port: Option<u16>,
+
+        /// Enable internal (unauthenticated) HTTP transport
         #[arg(long, env = "{{ PROJECT_NAME }}_INTERNAL_HTTP_ENABLED")]
         internal_http: bool,
 

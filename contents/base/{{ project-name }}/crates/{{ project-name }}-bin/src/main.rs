@@ -55,23 +55,38 @@ async fn main() -> Result<()> {
             {{ project_name }}_core::transport_stdio::serve_stdio(server).await
         }
 {% if has_http then %}
-        Commands::Serve { port, internal_http, internal_http_port } => {
+        Commands::Serve { http, http_port, internal_http, internal_http_port } => {
             let config = Arc::new({{ project_name }}_core::config::AppConfig::load()?);
             let server = {{ project_name }}_core::server::{{ ProjectName }}Server::new(Arc::clone(&config));
 
-            // Internal HTTP — optional, spawned alongside the external server
+            let ext_enabled = http || http_port.is_some() || config.http.enabled;
             let int_enabled = internal_http || internal_http_port.is_some() || config.http.internal.enabled;
+
+            if !ext_enabled && !int_enabled {
+                anyhow::bail!(
+                    "serve requires at least one transport: enable external with --http / \
+                     [http].enabled or internal with --internal-http / [http.internal].enabled"
+                );
+            }
+
+            // Internal HTTP — spawned alongside the external server when both enabled
             if int_enabled {
                 let int_port = internal_http_port.unwrap_or(config.http.internal.port);
                 let internal_server = server.clone();
-                tokio::spawn(async move {
-                    if let Err(e) = {{ project_name }}_core::transport_http::serve_internal_http(internal_server, int_port).await {
-                        tracing::error!("internal HTTP transport error: {e}");
-                    }
-                });
+                let fut = {{ project_name }}_core::transport_http::serve_internal_http(internal_server, int_port);
+                if ext_enabled {
+                    tokio::spawn(async move {
+                        if let Err(e) = fut.await {
+                            tracing::error!("internal HTTP transport error: {e}");
+                        }
+                    });
+                } else {
+                    // Internal only — run in the foreground so the process stays alive
+                    return fut.await;
+                }
             }
 
-            let ext_port = port.unwrap_or(config.http.port);
+            let ext_port = http_port.unwrap_or(config.http.port);
             let oauth = config.http.oauth.clone();
             {{ project_name }}_core::transport_http::serve_http(server, ext_port, oauth).await
         }
